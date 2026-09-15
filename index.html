@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Throttled vs Raw Visual Demo</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --panel: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --blue: #38bdf8;
+      --green: #4ade80;
+      --orange: #fb923c;
+      --red: #f87171;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; 
+  height: 100vh;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr 36px;
+  gap: 16px;
+  max-width: 1050px;
+  width: 100%;
+  height: calc(100vh - 32px); 
+}
+    /* 1. Dashboard */
+ .dashboard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  height: 100%;           
+  overflow-y: auto;       
+}
+
+    .dashboard h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-box {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.25rem;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .control-header span:last-child {
+      color: var(--blue);
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+
+    #gateStatus {
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-ready {
+      background: rgba(74, 222, 128, 0.15);
+      color: var(--green);
+      border: 1px solid var(--green);
+    }
+    .status-locked {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--red);
+      border: 1px solid var(--red);
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .stat-label { color: var(--muted); }
+    .stat-val { font-family: monospace; font-weight: bold; }
+    .stat-val.raw { color: var(--orange); }
+    .stat-val.throttled { color: var(--blue); }
+    .stat-val.sync { color: var(--green); }
+
+    .btn-reset {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+    }
+    .btn-reset:hover { background: #334155; color: white; }
+
+    /* 2. Scrollable Container */
+.scroll-wrapper {
+  position: relative;
+  border: 2px solid var(--blue);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+  height: 100%;           /* Stretches to fill */
+}
+
+#scroll-box {
+  height: 100%;           /* Dynamic: Always matches window size */
+  overflow-y: scroll;
+  padding: 1.25rem;
+}
+
+
+    #scroll-box::-webkit-scrollbar { width: 8px; }
+    #scroll-box::-webkit-scrollbar-track { background: #0b1120; }
+    #scroll-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+    .item {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.85rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .item h4 { color: var(--blue); margin-bottom: 4px; font-size: 0.95rem; transition: color 0.3s ease; }
+    .item p { color: var(--muted); font-size: 0.85rem; }
+
+    /* Card physically lights up when throttled code processes it */
+    .item.active-concept {
+      border-color: var(--green) !important;
+      box-shadow: 0 0 15px rgba(74, 222, 128, 0.25);
+    }
+    .item.active-concept h4 {
+      color: var(--green) !important;
+    }
+
+    /* 3. Visual Comparison Track */
+.track-wrapper {
+  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  height: 100%;           
+  width: 36px;
+  display: flex;
+  justify-content: center;
+}
+
+    .track-line {
+      position: absolute;
+      top: 20px;
+      bottom: 20px;
+      width: 2px;
+      background: var(--border);
+    }
+
+    /* Orange Dot = Moves instantly (Raw) */
+    #dot-raw {
+      position: absolute;
+      left: 4px;
+      top: 20px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--orange);
+      box-shadow: 0 0 8px var(--orange);
+      transition: top 0.05s linear;
+    }
+
+    /* Blue Dot = Frozen by Throttle */
+    #dot-throttled {
+      position: absolute;
+      right: 4px;
+      top: 20px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 8px var(--blue);
+      transition: top 0.25s ease-out;
+    }
+	
+	
+/* Catch-up Flash & Ripple Effect */
+#dot-throttled.synced {
+  transform: scale(1.6);
+  background: var(--green) !important;
+  box-shadow: 0 0 16px var(--green) !important;
+}
+
+/* Floating Meaningful Bubble */
+#snap-tag {
+  position: absolute;
+  right: 22px;
+  top: -6px;
+  background: var(--green);
+  color: #0b1120;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+}
+
+#snap-tag.show {
+  opacity: 1;
+  transform: translateX(0);
+}	
+  </style>
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- DASHBOARD -->
+    <aside class="dashboard">
+      <h2>
+        <span>Throttle Monitor</span>
+        <span id="gateStatus" class="status-ready">Gate: Ready</span>
+      </h2>
+
+      <div class="control-box">
+        <div class="control-header">
+          <span>Throttle Limit:</span>
+          <span id="limitVal">1000ms (1.0s)</span>
+        </div>
+        <input type="range" id="limitSlider" min="100" max="5000" step="100" value="1000" />
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">Raw Scroll Events:</span>
+        <span id="rawCount" class="stat-val raw">0</span>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">Throttled Calls:</span>
+        <span id="throttledCount" class="stat-val throttled">0</span>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">Events Blocked:</span>
+        <span id="droppedCount" class="stat-val">0</span>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--border); margin: 0.75rem 0;" />
+
+      <div class="stat-row">
+        <span class="stat-label">Raw ScrollTop:</span>
+        <span id="rawY" class="stat-val raw">0px</span>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">Throttled ScrollTop:</span>
+        <span id="throtY" class="stat-val sync">0px</span>
+      </div>
+
+      <div class="stat-row" style="margin-top: 6px;">
+        <span class="stat-label">Real Work Done:</span>
+        <span id="workPayload" class="stat-val sync" style="font-size: 0.78rem;">Idle</span>
+      </div>
+
+      <button class="btn-reset" id="resetBtn">Reset</button>
+    </aside>
+
+    <!-- SCROLL CONTAINER -->
+    <div class="scroll-wrapper">
+      <div id="scroll-box">
+        <div id="items-target"></div>
+      </div>
+    </div>
+
+    <!-- VISUAL TRACK (Shows physical proof of throttle) -->
+    <div class="track-wrapper" title="Left (Orange): Raw | Right (Blue): Throttled">
+      <div class="track-line"></div>
+      <div id="dot-raw" title="Raw Position (Instant)"></div>
+      <div id="dot-throttled" title="Throttled Position (Delay)"><span id="snap-tag"></span></div>
+    </div>
+
+  </div>
+<script src="throttleScroll.min.js"></script>
+
+</body>
+</html>
